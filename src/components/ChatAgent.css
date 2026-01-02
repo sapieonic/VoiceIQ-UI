@@ -1,0 +1,78 @@
+.chat-agent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.coming-soon-container {
+  text-align: center;
+  max-width: 400px;
+}
+
+.coming-soon-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-bg), transparent);
+  margin-bottom: 24px;
+}
+
+.coming-soon-icon svg {
+  color: var(--accent-primary);
+}
+
+.coming-soon-container h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.coming-soon-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin: 0 0 32px 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.coming-soon-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.feature-item svg {
+  color: var(--accent-primary);
+}
+
+.feature-item span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.coming-soon-description {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  margin: 0;
+}
