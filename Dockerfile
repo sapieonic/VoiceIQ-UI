@@ -15,8 +15,12 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build with default/placeholder API URL (will be replaced at runtime)
+# Build with default/placeholder values (will be replaced at runtime)
 ENV VITE_API_BASE_URL=__API_BASE_URL_PLACEHOLDER__
+ENV VITE_FARO_COLLECTOR_URL=__FARO_COLLECTOR_URL_PLACEHOLDER__
+ENV VITE_APP_NAME=__APP_NAME_PLACEHOLDER__
+ENV VITE_APP_VERSION=__APP_VERSION_PLACEHOLDER__
+ENV VITE_APP_ENVIRONMENT=__APP_ENVIRONMENT_PLACEHOLDER__
 RUN npm run build
 
 # Stage 2: Production with nginx
