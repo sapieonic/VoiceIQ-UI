@@ -91,6 +91,17 @@ The app uses Firebase Authentication with the following features:
 4. After authentication, the main app is displayed
 5. User info and logout button shown in header
 
+### API Authentication
+
+All API requests to Call-Mediator automatically include the Firebase ID token in the `Authorization` header. This is handled by the centralized API client (`src/utils/api.ts`).
+
+The token is:
+- Automatically obtained from the current Firebase user
+- Refreshed automatically when expired
+- Included in all API requests as `Bearer <token>`
+
+No additional configuration is required on the UI side.
+
 ## Project Structure
 
 ```
@@ -110,6 +121,8 @@ src/
 │   └── auth.ts          # Auth helper functions
 ├── types/               # TypeScript type definitions
 ├── utils/               # Utility functions
+│   ├── api.ts           # API client with auth
+│   └── callHistoryStorage.ts  # Local call history
 ├── App.tsx              # Main app component
 ├── main.tsx             # Entry point
 └── telemetry.ts         # Grafana Faro setup

@@ -31,15 +31,27 @@ import {
   formatDateTime,
   formatDuration,
 } from '../utils/callHistoryStorage';
+import {
+  apiPost,
+  apiGet,
+  getApiBaseUrl,
+  setApiBaseUrl as saveApiBaseUrl,
+  ApiError,
+  fetchAudioBlobUrl,
+  downloadFile,
+} from '../utils/api';
 import type { CallHistoryEntry, Recording } from '../types/callHistory';
 import './CallingAgent.css';
-
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 interface CallState {
   status: 'idle' | 'calling' | 'connected' | 'ended';
   error?: string;
   callId?: string;
+}
+
+/** Recording with blob URLs for authenticated playback */
+interface RecordingWithBlob extends Recording {
+  blobUrlMp3?: string;
 }
 
 export function CallingAgent() {
@@ -52,9 +64,7 @@ export function CallingAgent() {
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
   const [callState, setCallState] = useState<CallState>({ status: 'idle' });
   const [recordCall, setRecordCall] = useState<boolean>(true);
-  const [apiBaseUrl, setApiBaseUrl] = useState<string>(() => {
-    return localStorage.getItem('magikvoice_api_base_url') || DEFAULT_API_BASE_URL;
-  });
+  const [apiBaseUrl, setApiBaseUrl] = useState<string>(() => getApiBaseUrl());
 
   // History panel state
   const [historyOpen, setHistoryOpen] = useState<boolean>(true);
@@ -63,14 +73,35 @@ export function CallingAgent() {
   const [selectedRecordings, setSelectedRecordings] = useState<{
     callId: string;
     customerName: string;
-    recordings: Recording[];
+    recordings: RecordingWithBlob[];
   } | null>(null);
 
   const selectedAgent = agentConfigs.find((a) => a.id === selectedAgentId) as AgentConfig;
 
+  /**
+   * Revoke blob URLs to free memory.
+   * Call this when closing the recordings modal.
+   */
+  const cleanupBlobUrls = (recordings: RecordingWithBlob[] | undefined) => {
+    if (!recordings) return;
+    recordings.forEach((recording) => {
+      if (recording.blobUrlMp3) {
+        URL.revokeObjectURL(recording.blobUrlMp3);
+      }
+    });
+  };
+
+  /**
+   * Close the recordings modal and clean up blob URLs
+   */
+  const closeRecordingsModal = () => {
+    cleanupBlobUrls(selectedRecordings?.recordings);
+    setSelectedRecordings(null);
+  };
+
   // Save API base URL to localStorage when it changes
   useEffect(() => {
-    localStorage.setItem('magikvoice_api_base_url', apiBaseUrl);
+    saveApiBaseUrl(apiBaseUrl);
   }, [apiBaseUrl]);
 
   // Initialize variables when agent changes
@@ -101,6 +132,13 @@ export function CallingAgent() {
   useEffect(() => {
     loadFilteredHistory();
   }, [selectedAgentId, selectedLanguage]);
+
+  // Cleanup blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      cleanupBlobUrls(selectedRecordings?.recordings);
+    };
+  }, [selectedRecordings]);
 
   const loadFilteredHistory = () => {
     const allHistory = getCallHistory();
@@ -133,24 +171,11 @@ export function CallingAgent() {
     setCallState({ status: 'calling' });
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/call`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          phoneNumber,
-          systemPrompt: generatedPrompt,
-          record: recordCall,
-        }),
+      const data = await apiPost<{ callSid: string; success: boolean }>('/api/call', {
+        phoneNumber,
+        systemPrompt: generatedPrompt,
+        record: recordCall,
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
       console.log('Call initiated:', data);
 
       const callId = data.callSid;
@@ -179,9 +204,12 @@ export function CallingAgent() {
       });
     } catch (error) {
       console.error('Error initiating call:', error);
+      const errorMessage = error instanceof ApiError
+        ? error.message
+        : 'Failed to initiate call. Please check if the server is running.';
       setCallState({
         status: 'idle',
-        error: 'Failed to initiate call. Please check if the server is running.',
+        error: errorMessage,
       });
     }
   };
@@ -190,16 +218,7 @@ export function CallingAgent() {
     if (!callState.callId) return;
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/call/${callState.callId}/end`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        console.error('Failed to end call:', response.status);
-      }
+      await apiPost(`/api/call/${callState.callId}/end`);
     } catch (error) {
       console.error('Error ending call:', error);
     }
@@ -218,30 +237,36 @@ export function CallingAgent() {
     setLoadingRecordings(entry.callId);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/call/${entry.callId}/recordings`, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch recordings: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiGet<{ success: boolean; recordings: Recording[] }>(
+        `/api/call/${entry.callId}/recordings`
+      );
 
       if (data.success && data.recordings && data.recordings.length > 0) {
+        // Fetch audio blobs for each recording (with authentication)
+        const recordingsWithBlobs: RecordingWithBlob[] = await Promise.all(
+          data.recordings.map(async (recording) => {
+            try {
+              const blobUrlMp3 = await fetchAudioBlobUrl(recording.downloadUrlMp3);
+              return { ...recording, blobUrlMp3 };
+            } catch (err) {
+              console.error('Failed to fetch audio blob:', err);
+              return recording; // Return without blob if fetch fails
+            }
+          })
+        );
+
         setSelectedRecordings({
           callId: entry.callId,
           customerName: entry.customerName,
-          recordings: data.recordings,
+          recordings: recordingsWithBlobs,
         });
       } else {
         alert('No recordings found for this call');
       }
     } catch (err) {
       console.error('Error fetching recordings:', err);
-      alert('Failed to fetch recordings');
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to fetch recordings';
+      alert(errorMessage);
     } finally {
       setLoadingRecordings(null);
     }
@@ -534,11 +559,11 @@ export function CallingAgent() {
 
       {/* Recordings Modal */}
       {selectedRecordings && (
-        <div className="modal-overlay" onClick={() => setSelectedRecordings(null)}>
+        <div className="modal-overlay" onClick={closeRecordingsModal}>
           <div className="recordings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Recordings - {selectedRecordings.customerName}</h3>
-              <button className="close-btn" onClick={() => setSelectedRecordings(null)}>
+              <button className="close-btn" onClick={closeRecordingsModal}>
                 <X size={20} />
               </button>
             </div>
@@ -553,29 +578,33 @@ export function CallingAgent() {
                     </div>
                   </div>
                   <div className="recording-player">
-                    <audio controls src={recording.downloadUrlMp3}>
-                      Your browser does not support audio playback.
-                    </audio>
+                    {recording.blobUrlMp3 ? (
+                      <audio controls src={recording.blobUrlMp3}>
+                        Your browser does not support audio playback.
+                      </audio>
+                    ) : (
+                      <span className="audio-loading">Loading audio...</span>
+                    )}
                   </div>
                   <div className="recording-actions">
-                    <a
-                      href={recording.downloadUrlMp3}
-                      download
+                    <button
                       className="download-btn"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={() => downloadFile(
+                        recording.downloadUrlMp3,
+                        `recording-${recording.sid}.mp3`
+                      )}
                     >
                       <Download size={14} /> MP3
-                    </a>
-                    <a
-                      href={recording.downloadUrlWav}
-                      download
+                    </button>
+                    <button
                       className="download-btn"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={() => downloadFile(
+                        recording.downloadUrlWav,
+                        `recording-${recording.sid}.wav`
+                      )}
                     >
                       <Download size={14} /> WAV
-                    </a>
+                    </button>
                   </div>
                 </div>
               ))}
