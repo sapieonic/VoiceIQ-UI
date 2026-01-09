@@ -7,6 +7,7 @@ export const insuranceAgent: AgentConfig = {
   type: 'insurance_sales_agent',
   role: 'Life Insurance Sales Representative',
   company: 'OptimaLife',
+  isHidden: true,
   tone: 'Persuasive, friendly and consultative',
   supportedLanguages: ['english', 'hindi'],
   defaultLanguage: 'hindi',

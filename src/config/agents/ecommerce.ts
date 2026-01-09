@@ -7,6 +7,7 @@ export const ecommerceAgent: AgentConfig = {
   type: 'customer_support_agent',
   role: 'Customer Support Representative',
   company: 'FlipMart',
+  isHidden: true,
   tone: 'Empathetic and helpful',
   supportedLanguages: ['english', 'hindi', 'kannada', 'telugu'],
   defaultLanguage: 'hindi',
