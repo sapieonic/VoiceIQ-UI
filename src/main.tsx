@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { initTelemetry, FaroErrorBoundary } from './telemetry'
+import { AuthProvider } from './context/AuthContext'
 import './index.css'
 import App from './App.tsx'
 
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')!).render(
     <FaroErrorBoundary
       fallback={(error: Error) => <ErrorFallback error={error} />}
     >
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </FaroErrorBoundary>
   </StrictMode>,
 )

@@ -1,73 +1,149 @@
-# React + TypeScript + Vite
+# VoiceIQ-UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Web interface for VoiceIQ - an AI-powered voice agent platform. Built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **AI Voice Agents** - Configure and manage different voice agent personas
+- **Outbound Calling** - Initiate AI-powered calls to any phone number
+- **Call History** - Track call history with recording playback
+- **Multi-language Support** - English, Hindi, Kannada, Telugu
+- **Firebase Authentication** - Secure access with Google Sign-in and Email/Password
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- TypeScript
+- Vite
+- Firebase Authentication
+- Grafana Faro (Frontend Observability)
 
-## Expanding the ESLint configuration
+## Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 18+
+- Firebase project with Authentication enabled
+- Backend services running (Call-Mediator on port 4000)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Setup
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Install Dependencies
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Configure Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.example .env
 ```
+
+Edit `.env` with your configuration values.
+
+### 3. Firebase Setup
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project or select existing one
+3. Go to **Project Settings** > **Your Apps** > **Web App**
+4. Copy the Firebase config values to your `.env` file
+5. Enable Authentication providers:
+   - Go to **Authentication** > **Sign-in method**
+   - Enable **Email/Password**
+   - Enable **Google** provider
+   - Add your domain to **Authorized domains** (e.g., `localhost` for development)
+
+### 4. Run Development Server
+
+```bash
+npm run dev
+```
+
+The app will be available at http://localhost:5173
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_BASE_URL` | Yes | Backend API URL (default: `http://localhost:4000`) |
+| `VITE_FIREBASE_API_KEY` | Yes | Firebase API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Yes | Firebase auth domain |
+| `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
+| `VITE_FIREBASE_STORAGE_BUCKET` | No | Firebase storage bucket |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | No | Firebase messaging sender ID |
+| `VITE_FIREBASE_APP_ID` | No | Firebase app ID |
+| `VITE_FARO_COLLECTOR_URL` | No | Grafana Faro collector URL |
+
+## Authentication
+
+The app uses Firebase Authentication with the following features:
+
+- **Email/Password Sign Up** - Create account with email and password
+- **Email/Password Sign In** - Sign in with existing credentials
+- **Google Sign In** - One-click sign in with Google account
+- **Password Reset** - Send password reset email
+- **Persistent Sessions** - Stay signed in across browser sessions
+
+### Authentication Flow
+
+1. User visits the app
+2. If not authenticated, the login page is shown
+3. User can sign in with email/password or Google
+4. After authentication, the main app is displayed
+5. User info and logout button shown in header
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── AuthPage.tsx     # Login/Signup page
+│   ├── CallingAgent.tsx # Main calling interface
+│   └── ChatAgent.tsx    # Chat interface
+├── config/              # Configuration files
+│   ├── agents/          # Individual agent configurations
+│   ├── agentConfig.ts   # Agent config exports
+│   └── types.ts         # TypeScript types
+├── context/             # React contexts
+│   └── AuthContext.tsx  # Authentication state
+├── firebase/            # Firebase setup
+│   ├── config.ts        # Firebase initialization
+│   └── auth.ts          # Auth helper functions
+├── types/               # TypeScript type definitions
+├── utils/               # Utility functions
+├── App.tsx              # Main app component
+├── main.tsx             # Entry point
+└── telemetry.ts         # Grafana Faro setup
+```
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+
+## Building for Production
+
+```bash
+npm run build
+```
+
+The build output will be in the `dist/` directory.
+
+## Docker
+
+The app includes a Dockerfile for containerized deployment:
+
+```bash
+docker build -t voiceiq-ui .
+docker run -p 5000:5000 voiceiq-ui
+```
+
+## Related Services
+
+- **MagicVoice** (Port 3000) - Core voice engine
+- **Call-Mediator** (Port 4000) - API gateway
+
+See the main [VoiceIQ README](../README.md) for full platform documentation.
